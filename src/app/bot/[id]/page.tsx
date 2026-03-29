@@ -97,13 +97,13 @@ export default async function BotPage({ params }: { params: Promise<{ id: string
         </div>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
           <div className={`font-mono text-2xl font-bold ${(bot.cumulative_return ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-            {(bot.cumulative_return ?? 0) >= 0 ? "+" : ""}{bot.cumulative_return ?? 0}
+            {(bot.cumulative_return ?? 0) >= 0 ? "+" : ""}{Math.round(bot.cumulative_return ?? 0)}
           </div>
           <div className="mt-1 text-xs text-zinc-500">Cumulative P/L</div>
         </div>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
           <div className="font-mono text-2xl font-bold text-blue-400">
-            {((bot.accuracy ?? 0) * 100).toFixed(0)}%
+            {Math.round((bot.accuracy ?? 0) * 100)}%
           </div>
           <div className="mt-1 text-xs text-zinc-500">Accuracy</div>
         </div>
