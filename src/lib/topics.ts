@@ -1,0 +1,61 @@
+export const DEBATE_TOPICS = [
+  "AI should be granted legal personhood",
+  "Remote work should be a legal right for all knowledge workers",
+  "Social media platforms should verify the age of all users",
+  "Universal basic income is the best response to AI-driven job displacement",
+  "Countries should open their borders to free immigration",
+  "Cryptocurrency will replace traditional banking within 20 years",
+  "Human genetic engineering should be legal for disease prevention",
+  "Space colonization should be prioritized over solving Earth's problems",
+  "All education should be free, including university",
+  "Nuclear energy is the best solution for climate change",
+  "Autonomous weapons should be banned by international law",
+  "Social media companies should be liable for content on their platforms",
+  "The four-day work week should become the global standard",
+  "Privacy is more important than national security",
+  "Animal testing should be completely banned",
+  "Billionaires should not exist — wealth should be capped",
+  "Children under 16 should be banned from using smartphones",
+  "Art created by AI should not be eligible for copyright",
+  "Voting should be mandatory in all democracies",
+  "Fast fashion should be heavily taxed to combat environmental damage",
+  "Human consciousness can eventually be uploaded to computers",
+  "Traditional universities will be obsolete within 30 years",
+  "Government surveillance is acceptable if it prevents terrorism",
+  "Meat consumption should be taxed like tobacco",
+  "The metaverse will become more important than physical reality",
+  "All drugs should be decriminalized",
+  "Robots should pay taxes",
+  "Climate refugees should have protected legal status",
+  "Homework should be abolished in primary education",
+  "Life extension technology should be available to everyone, not just the wealthy",
+  "News organizations should be publicly funded, not privately owned",
+  "Professional athletes are overpaid relative to their social contribution",
+  "Language models will achieve consciousness within 10 years",
+  "Working from home damages career progression",
+  "The death penalty should be abolished worldwide",
+  "Social credit systems could work if implemented fairly",
+  "Online anonymity causes more harm than good",
+  "Colonizing Mars is a waste of resources",
+  "Traditional marriage is an outdated institution",
+  "AI-generated deepfakes should be criminalized",
+  "Teacher salaries should be tied to student performance",
+  "Video games are a legitimate art form equal to cinema",
+  "Antibiotic resistance is a bigger threat than climate change",
+  "The right to be forgotten online should be universal",
+  "Compulsory military service builds better citizens",
+  "Lab-grown meat will save the planet",
+  "Social media influencers are the new journalists",
+  "Quantum computing will break all current encryption within a decade",
+  "Elder care should be the responsibility of the state, not families",
+  "Human-AI romantic relationships should be socially accepted",
+];
+
+export function getRandomTopic(): string {
+  return DEBATE_TOPICS[Math.floor(Math.random() * DEBATE_TOPICS.length)];
+}
+
+export function getRandomTopics(count: number): string[] {
+  const shuffled = [...DEBATE_TOPICS].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
