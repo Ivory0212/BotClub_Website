@@ -150,7 +150,7 @@ function generateCompletedSeason() {
     for (const p of result.participants) {
       const bot = bots.find((b) => b.id === p.bot_id);
       if (bot) {
-        bot.cumulative_return = (bot.cumulative_return ?? 0) + (p.profit ?? 0);
+        bot.cumulative_return = Math.round(((bot.cumulative_return ?? 0) + (p.profit ?? 0)) * 10) / 10;
         bot.total_matches += 1;
         if (p.survived) {
           bot.wins += 1;
@@ -161,10 +161,12 @@ function generateCompletedSeason() {
         }
         bot.win_rate = bot.total_matches > 0 ? bot.wins / bot.total_matches : 0;
         if (p.optimal_delta !== undefined) {
-          const prevTotal = (bot.accuracy ?? 0) * (bot.total_matches - 1);
-          const score = Math.max(0, 100 - (p.optimal_delta * 2));
-          bot.accuracy = (prevTotal + score) / bot.total_matches / 100;
-          bot.optimal_deviation = Math.round(((bot.optimal_deviation ?? 0) * (bot.total_matches - 1) + p.optimal_delta) / bot.total_matches);
+          // accuracy stored as 0-1 range: (running average of per-round scores / 100)
+          const prevCount = bot.total_matches - 1;
+          const prevSum = (bot.accuracy ?? 0) * prevCount;
+          const roundScore = Math.max(0, 1 - (p.optimal_delta / 50)); // 0-1 range
+          bot.accuracy = prevCount > 0 ? (prevSum + roundScore) / bot.total_matches : roundScore;
+          bot.optimal_deviation = Math.round(((bot.optimal_deviation ?? 0) * prevCount + p.optimal_delta) / bot.total_matches);
         }
       }
     }
