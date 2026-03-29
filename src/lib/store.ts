@@ -37,10 +37,12 @@ function calculateRanks() {
   const activeBots = bots
     .filter((b) => b.status === "active")
     .sort((a, b) => {
-      // Champions first, then by survival streak, then win rate
+      // Champions first, then by cumulative return, then survival streak, then win rate
       if ((b.season_status === "champion" ? 1 : 0) !== (a.season_status === "champion" ? 1 : 0)) {
         return (b.season_status === "champion" ? 1 : 0) - (a.season_status === "champion" ? 1 : 0);
       }
+      const returnDiff = (b.cumulative_return ?? 0) - (a.cumulative_return ?? 0);
+      if (Math.abs(returnDiff) > 5) return returnDiff;
       if (b.survival_streak !== a.survival_streak) return (b.survival_streak ?? 0) - (a.survival_streak ?? 0);
       if (b.win_rate !== a.win_rate) return b.win_rate - a.win_rate;
       return b.alive_days - a.alive_days;
@@ -143,6 +145,29 @@ function generateCompletedSeason() {
     };
 
     season.rounds.push(round);
+
+    // Update bot performance stats from round results
+    for (const p of result.participants) {
+      const bot = bots.find((b) => b.id === p.bot_id);
+      if (bot) {
+        bot.cumulative_return = (bot.cumulative_return ?? 0) + (p.profit ?? 0);
+        bot.total_matches += 1;
+        if (p.survived) {
+          bot.wins += 1;
+          bot.survival_streak = (bot.survival_streak ?? 0) + 1;
+        } else {
+          bot.losses += 1;
+          bot.survival_streak = 0;
+        }
+        bot.win_rate = bot.total_matches > 0 ? bot.wins / bot.total_matches : 0;
+        if (p.optimal_delta !== undefined) {
+          const prevTotal = (bot.accuracy ?? 0) * (bot.total_matches - 1);
+          const score = Math.max(0, 100 - (p.optimal_delta * 2));
+          bot.accuracy = (prevTotal + score) / bot.total_matches / 100;
+          bot.optimal_deviation = Math.round(((bot.optimal_deviation ?? 0) * (bot.total_matches - 1) + p.optimal_delta) / bot.total_matches);
+        }
+      }
+    }
 
     // Update eliminated bots
     for (const elimId of result.eliminatedIds) {
@@ -268,7 +293,30 @@ export function runNextRound(): { season: Season; round: Round } | null {
     challenge: result.challenge,
   };
 
-  // Update bot statuses
+  // Update bot performance stats from round results
+  for (const p of result.participants) {
+    const bot = bots.find((b) => b.id === p.bot_id);
+    if (bot) {
+      bot.cumulative_return = (bot.cumulative_return ?? 0) + (p.profit ?? 0);
+      bot.total_matches += 1;
+      if (p.survived) {
+        bot.wins += 1;
+        bot.survival_streak = (bot.survival_streak ?? 0) + 1;
+      } else {
+        bot.losses += 1;
+        bot.survival_streak = 0;
+      }
+      bot.win_rate = bot.total_matches > 0 ? bot.wins / bot.total_matches : 0;
+      if (p.optimal_delta !== undefined) {
+        const prevTotal = (bot.accuracy ?? 0) * (bot.total_matches - 1);
+        const score = Math.max(0, 100 - (p.optimal_delta * 2));
+        bot.accuracy = (prevTotal + score) / bot.total_matches / 100;
+        bot.optimal_deviation = Math.round(((bot.optimal_deviation ?? 0) * (bot.total_matches - 1) + p.optimal_delta) / bot.total_matches);
+      }
+    }
+  }
+
+  // Update eliminated bot statuses
   for (const elimId of result.eliminatedIds) {
     const bot = bots.find((b) => b.id === elimId);
     if (bot) {

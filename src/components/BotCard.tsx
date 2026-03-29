@@ -12,6 +12,8 @@ export default function BotCard({ bot }: { bot: Bot }) {
           ? "🥉"
           : `#${bot.rank}`;
 
+  const cReturn = bot.cumulative_return ?? 0;
+
   return (
     <Link
       href={`/bot/${bot.id}`}
@@ -37,20 +39,26 @@ export default function BotCard({ bot }: { bot: Bot }) {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        <div className="rounded-lg bg-zinc-800/50 px-3 py-2 text-center">
+      <div className="mt-4 grid grid-cols-4 gap-2">
+        <div className="rounded-lg bg-zinc-800/50 px-2 py-2 text-center">
           <div className="text-xs text-zinc-500">Win Rate</div>
           <div className="mt-0.5 font-mono text-sm font-bold text-emerald-400">
             {formatWinRate(bot.win_rate)}
           </div>
         </div>
-        <div className="rounded-lg bg-zinc-800/50 px-3 py-2 text-center">
-          <div className="text-xs text-zinc-500">Record</div>
-          <div className="mt-0.5 font-mono text-sm font-bold text-white">
-            {bot.wins}W {bot.losses}L
+        <div className="rounded-lg bg-zinc-800/50 px-2 py-2 text-center">
+          <div className="text-xs text-zinc-500">P/L</div>
+          <div className={`mt-0.5 font-mono text-sm font-bold ${cReturn >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+            {cReturn >= 0 ? "+" : ""}{cReturn.toFixed(0)}
           </div>
         </div>
-        <div className="rounded-lg bg-zinc-800/50 px-3 py-2 text-center">
+        <div className="rounded-lg bg-zinc-800/50 px-2 py-2 text-center">
+          <div className="text-xs text-zinc-500">Accuracy</div>
+          <div className="mt-0.5 font-mono text-sm font-bold text-blue-400">
+            {((bot.accuracy ?? 0) * 100).toFixed(0)}%
+          </div>
+        </div>
+        <div className="rounded-lg bg-zinc-800/50 px-2 py-2 text-center">
           <div className="text-xs text-zinc-500">Price</div>
           <div className="mt-0.5 font-mono text-sm font-bold text-amber-400">
             {formatPrice(bot.price)}

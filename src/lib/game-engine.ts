@@ -173,6 +173,102 @@ const OPTIMIZATION_PROBLEMS: { scenario: string; variables: Record<string, numbe
   },
 ];
 
+// ─── DYNAMIC SCENARIO GENERATORS ───────────────────────────
+
+const MARKET_SECTORS = ["Tech", "Energy", "Biotech", "Real Estate", "Commodities", "Crypto", "Financials", "Industrials"];
+const MARKET_CATALYSTS = [
+  { event: "central bank rate decision", weight: 1.2 },
+  { event: "earnings season surprise", weight: 0.8 },
+  { event: "geopolitical escalation", weight: 1.5 },
+  { event: "regulatory announcement", weight: 1.0 },
+  { event: "supply chain disruption", weight: 1.3 },
+  { event: "breakthrough technology report", weight: 0.9 },
+  { event: "trade agreement signed", weight: 0.7 },
+  { event: "pandemic-related news", weight: 1.4 },
+];
+
+function generateDynamicMarketScenario(): { scenario: string; signals: Record<string, string | number>; optimal: number; explanation: string } {
+  const sector = pickRandom(MARKET_SECTORS);
+  const catalyst = pickRandom(MARKET_CATALYSTS);
+  const sentiments = ["bearish", "cautious", "neutral", "cautious_bull", "bullish"];
+  const sentiment = pickRandom(sentiments);
+  const sentimentIdx = sentiments.indexOf(sentiment);
+
+  // Generate random but correlated signals
+  const momentum = (Math.random() - 0.5) * 2; // -1 to 1
+  const volatility = Math.random() * 40 + 10; // 10-50
+  const volume_change = Math.round((Math.random() - 0.3) * 200);
+  const correlation = Math.round((Math.random() - 0.5) * 100) / 100;
+
+  // Calculate optimal based on signals
+  const baseMove = momentum * 10 * catalyst.weight;
+  const sentimentFactor = (sentimentIdx - 2) * 2; // -4 to +4
+  const optimal = Math.round((baseMove + sentimentFactor + (Math.random() - 0.5) * 5) * 10) / 10;
+
+  const direction = optimal > 0 ? "bullish" : "bearish";
+  const signals: Record<string, string | number> = {
+    sector,
+    catalyst: catalyst.event,
+    momentum: Math.round(momentum * 100) / 100,
+    volatility: Math.round(volatility),
+    volume_change,
+    sentiment,
+    correlation_to_index: correlation,
+  };
+
+  return {
+    scenario: `${sector} sector after ${catalyst.event}. Momentum: ${momentum > 0 ? "+" : ""}${(momentum * 100).toFixed(0)}%, Volatility: ${volatility.toFixed(0)}%, Volume change: ${volume_change > 0 ? "+" : ""}${volume_change}%, Market sentiment: ${sentiment.replace("_", " ")}.`,
+    signals,
+    optimal,
+    explanation: `${direction.charAt(0).toUpperCase() + direction.slice(1)} move of ${optimal > 0 ? "+" : ""}${optimal}%. ${catalyst.event} with ${catalyst.weight > 1 ? "above-average" : "moderate"} impact on ${sector}. Momentum and sentiment ${momentum * (sentimentIdx - 2) > 0 ? "aligned" : "diverged"}, creating ${Math.abs(optimal) > 10 ? "strong" : "moderate"} directional signal.`,
+  };
+}
+
+function generateDynamicAllocationScenario(): { scenario: string; options: string[]; optimal: number[]; explanation: string } {
+  const contexts = [
+    { context: "recession fears", bias: [15, 10, 35, 40] }, // defensive
+    { context: "growth acceleration", bias: [35, 30, 20, 15] }, // risk-on
+    { context: "high inflation", bias: [10, 15, 25, 50] }, // inflation hedge
+    { context: "political uncertainty", bias: [20, 15, 40, 25] }, // balanced defensive
+    { context: "post-crisis recovery", bias: [30, 35, 15, 20] }, // risk-on value
+  ];
+  const options = [
+    ["Growth Equity", "Value Equity", "Government Bonds", "Commodities"],
+    ["Domestic Large-Cap", "International EM", "Corporate Bonds", "Gold & Metals"],
+    ["Tech Innovation", "Dividend Aristocrats", "Treasury Inflation-Protected", "Real Assets"],
+  ];
+
+  const ctx = pickRandom(contexts);
+  const opts = pickRandom(options);
+
+  // Add noise to optimal
+  const raw = ctx.bias.map((b) => Math.max(5, b + Math.round((Math.random() - 0.5) * 20)));
+  const total = raw.reduce((a, b) => a + b, 0);
+  const optimal = raw.map((v) => Math.round((v / total) * 1000));
+  const diff = 1000 - optimal.reduce((a, b) => a + b, 0);
+  optimal[0] += diff;
+
+  return {
+    scenario: `Allocate 1,000 points across 4 asset classes in a ${ctx.context} environment`,
+    options: opts.map((o, i) => `${o} (optimal ~${optimal[i]})`),
+    optimal,
+    explanation: `${ctx.context}: ${opts.map((o, i) => `${o}: ${optimal[i]} (${optimal[i] / 10}%)`).join(", ")}. Allocation balances risk-return given macro environment.`,
+  };
+}
+
+function generateDynamicRiskScenario(): { scenario: string; question: string; actual_probability: number; explanation: string } {
+  const templates = [
+    { s: () => { const p = Math.round(Math.random() * 30 + 5); return { scenario: `A startup raised $${Math.round(Math.random() * 50 + 10)}M Series ${pickRandom(["A", "B", "C"])} and claims ${Math.round(Math.random() * 5 + 2)}x revenue growth`, question: "Probability of achieving next funding round within 18 months?", actual: p, explanation: `Base rate for startups at this stage reaching next round: ~${p}%. Growth claims often inflate actual trajectory.` }; } },
+    { s: () => { const p = Math.round(Math.random() * 40 + 20); return { scenario: `Political polling shows candidate at ${Math.round(Math.random() * 15 + 45)}% in a ${pickRandom(["swing state", "battleground district", "contested race"])}`, question: "Probability this candidate wins the election?", actual: p, explanation: `Polls at this margin historically translate to ~${p}% win probability. Systematic polling errors and turnout models add significant uncertainty.` }; } },
+    { s: () => { const p = Math.round(Math.random() * 25 + 10); return { scenario: `A company announces a ${pickRandom(["merger", "acquisition", "spinoff"])} deal valued at $${Math.round(Math.random() * 20 + 5)}B`, question: "Probability the deal closes as announced?", actual: p, explanation: `Announced deals at this size close ~${p}% of the time without material changes. Regulatory scrutiny and financing conditions are key risk factors.` }; } },
+    { s: () => { const p = Math.round(Math.random() * 30 + 25); return { scenario: `Weather models predict ${pickRandom(["heavy snow", "tropical storm", "heat wave", "flooding"])} in ${Math.round(Math.random() * 48 + 24)} hours`, question: "Probability the event reaches predicted severity?", actual: p, explanation: `${Math.round(Math.random() * 48 + 24)}-hour predictions of this type achieve ~${p}% accuracy for severity. Models tend to overpredict extremes.` }; } },
+  ];
+
+  const tmpl = pickRandom(templates);
+  const result = tmpl.s();
+  return { scenario: result.scenario, question: result.question, actual_probability: result.actual, explanation: result.explanation };
+}
+
 // ─── INNER THOUGHTS & REACTIONS ────────────────────────────
 
 const ANALYSIS_THOUGHTS = [
@@ -204,7 +300,8 @@ const VICTORY_THOUGHTS = [
 // ─── SIMULATE ROUNDS ──────────────────────────────────────
 
 export function simulateMarketForecast(bots: Bot[]): { participants: RoundParticipant[]; events: GameEvent[]; eliminatedIds: string[]; challenge: ChallengeData } {
-  const scenario = pickRandom(MARKET_SCENARIOS);
+  // 50% static scenarios, 50% dynamically generated
+  const scenario = Math.random() > 0.5 ? pickRandom(MARKET_SCENARIOS) : generateDynamicMarketScenario();
   const events: GameEvent[] = [];
 
   events.push({
@@ -319,7 +416,7 @@ export function simulateMarketForecast(bots: Bot[]): { participants: RoundPartic
 }
 
 export function simulateResourceAllocation(bots: Bot[]): { participants: RoundParticipant[]; events: GameEvent[]; eliminatedIds: string[]; challenge: ChallengeData } {
-  const scenario = pickRandom(ALLOCATION_SCENARIOS);
+  const scenario = Math.random() > 0.5 ? pickRandom(ALLOCATION_SCENARIOS) : generateDynamicAllocationScenario();
   const events: GameEvent[] = [];
 
   events.push({
@@ -548,8 +645,10 @@ export function simulatePrisonersDilemma(bots: Bot[]): { participants: RoundPart
 
 export function simulateRiskAssessment(bots: Bot[]): { participants: RoundParticipant[]; events: GameEvent[]; eliminatedIds: string[]; challenge: ChallengeData } {
   const events: GameEvent[] = [];
-  // Pick 3 random scenarios
-  const scenarios = shuffle(RISK_SCENARIOS).slice(0, 3);
+  // Mix of static and dynamic scenarios
+  const staticPick = shuffle(RISK_SCENARIOS).slice(0, 2);
+  const dynamicPick = [generateDynamicRiskScenario()];
+  const scenarios = shuffle([...staticPick, ...dynamicPick]).slice(0, 3);
 
   events.push({
     id: generateId(),

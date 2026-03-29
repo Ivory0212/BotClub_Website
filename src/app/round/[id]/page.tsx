@@ -88,6 +88,66 @@ export default async function RoundPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
+      {/* Theory vs Actual */}
+      {round.challenge && ranked.length > 0 && (
+        <div className="mb-8 rounded-xl border border-amber-500/20 bg-amber-500/5 p-6">
+          <h2 className="mb-4 text-lg font-bold text-amber-400">⚖️ Theory vs Actual Performance</h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-lg bg-zinc-900/80 p-4 text-center">
+              <div className="text-xs font-medium text-zinc-500">THEORETICAL OPTIMAL</div>
+              <div className="mt-1 font-mono text-xl font-bold text-emerald-400">
+                {round.challenge.optimal_answer ?? "—"}
+              </div>
+              <div className="mt-1 text-xs text-zinc-600">Perfect score: 100.0</div>
+            </div>
+            <div className="rounded-lg bg-zinc-900/80 p-4 text-center">
+              <div className="text-xs font-medium text-zinc-500">BEST BOT</div>
+              <div className="mt-1 font-mono text-xl font-bold text-blue-400">
+                {ranked[0].decision ?? "—"}
+              </div>
+              <div className="mt-1 text-xs text-zinc-600">
+                {ranked[0].bot?.avatar_emoji} {ranked[0].bot?.name} — Score: {ranked[0].score?.toFixed(1)}
+              </div>
+            </div>
+            <div className="rounded-lg bg-zinc-900/80 p-4 text-center">
+              <div className="text-xs font-medium text-zinc-500">FIELD AVERAGE</div>
+              <div className="mt-1 font-mono text-xl font-bold text-zinc-300">
+                {(ranked.reduce((s, p) => s + (p.score ?? 0), 0) / ranked.length).toFixed(1)}
+              </div>
+              <div className="mt-1 text-xs text-zinc-600">
+                Avg deviation: {(ranked.reduce((s, p) => s + (p.optimal_delta ?? 0), 0) / ranked.length).toFixed(1)}
+              </div>
+            </div>
+          </div>
+          {/* Performance distribution bar */}
+          <div className="mt-4">
+            <div className="mb-1 flex justify-between text-xs text-zinc-500">
+              <span>Score Distribution (0-100)</span>
+              <span>{ranked.filter(p => (p.score ?? 0) >= 70).length}/{ranked.length} scored 70+</span>
+            </div>
+            <div className="flex h-6 gap-0.5 overflow-hidden rounded-lg">
+              {ranked.map((p, i) => (
+                <div
+                  key={p.bot_id}
+                  className={`transition-all ${
+                    (p.score ?? 0) >= 80 ? "bg-emerald-500" :
+                    (p.score ?? 0) >= 60 ? "bg-emerald-700" :
+                    (p.score ?? 0) >= 40 ? "bg-amber-600" :
+                    "bg-rose-600"
+                  } ${!p.survived ? "opacity-40" : ""}`}
+                  style={{ flex: 1 }}
+                  title={`${p.bot?.name}: ${p.score?.toFixed(1)}`}
+                />
+              ))}
+            </div>
+            <div className="mt-1 flex justify-between text-xs">
+              <span className="text-emerald-400">Best: {ranked[0].score?.toFixed(1)}</span>
+              <span className="text-rose-400">Worst: {ranked[ranked.length - 1].score?.toFixed(1)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scoreboard */}
       <div className="mb-8">
         <h2 className="mb-4 text-xl font-bold text-white">📊 Scoreboard</h2>
