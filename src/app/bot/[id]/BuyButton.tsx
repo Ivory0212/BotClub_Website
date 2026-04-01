@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/components/i18n/I18nProvider";
 import { formatPrice } from "@/lib/utils";
 
 interface BuyButtonProps {
@@ -11,6 +12,7 @@ interface BuyButtonProps {
 }
 
 export default function BuyButton({ botId, botName, price }: BuyButtonProps) {
+  const { t } = useI18n();
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -28,7 +30,7 @@ export default function BuyButton({ botId, botName, price }: BuyButtonProps) {
         router.refresh();
       } else {
         const data = await res.json();
-        alert(data.error || "Purchase failed");
+        alert((data as { error?: string }).error || t("buy.purchaseFailed"));
       }
     } finally {
       setLoading(false);
@@ -40,25 +42,22 @@ export default function BuyButton({ botId, botName, price }: BuyButtonProps) {
     return (
       <div className="flex flex-col gap-2">
         <p className="text-sm text-zinc-400">
-          Buy <strong className="text-white">{botName}</strong> for{" "}
-          <strong className="text-amber-400">{formatPrice(price)}</strong>?
+          {t("buy.confirmLine", { name: botName, price: formatPrice(price) })}
         </p>
-        <p className="text-xs text-zinc-500">
-          This will reveal the bot&apos;s hidden strategy and remove it from the leaderboard.
-        </p>
+        <p className="text-xs text-zinc-500">{t("buy.confirmSub")}</p>
         <div className="flex gap-2">
           <button
             onClick={handlePurchase}
             disabled={loading}
             className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-emerald-400 disabled:opacity-50"
           >
-            {loading ? "Processing..." : "Confirm Purchase"}
+            {loading ? t("buy.processing") : t("buy.confirmPurchase")}
           </button>
           <button
             onClick={() => setShowConfirm(false)}
             className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-800"
           >
-            Cancel
+            {t("buy.cancel")}
           </button>
         </div>
       </div>
@@ -70,7 +69,7 @@ export default function BuyButton({ botId, botName, price }: BuyButtonProps) {
       onClick={() => setShowConfirm(true)}
       className="rounded-lg bg-amber-500 px-6 py-2.5 font-medium text-black transition-all hover:bg-amber-400 hover:shadow-lg hover:shadow-amber-500/25"
     >
-      Buy This Bot
+      {t("buy.buyThisBot")}
     </button>
   );
 }

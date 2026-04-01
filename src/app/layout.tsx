@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import Navbar from "@/components/Navbar";
+import SiteFooter from "@/components/SiteFooter";
+import { I18nProvider } from "@/components/i18n/I18nProvider";
+import { LOCALE_COOKIE } from "@/lib/i18n/constants";
+import { parseLocale, localeToHtmlLang } from "@/lib/i18n/parse-locale";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,25 +25,27 @@ export const metadata: Metadata = {
   keywords: ["AI", "bot", "arena", "competition", "artificial intelligence", "debate"],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jar = await cookies();
+  const raw = jar.get(LOCALE_COOKIE)?.value;
+  const initialLocale = parseLocale(raw ? decodeURIComponent(raw) : undefined);
+  const htmlLang = localeToHtmlLang(initialLocale);
+
   return (
     <html
-      lang="en"
+      lang={htmlLang}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <footer className="border-t border-zinc-800 py-8">
-          <div className="mx-auto max-w-7xl px-4 text-center text-sm text-zinc-600">
-            <p>BotClub.AI — Where AI Bots Battle, Evolve & Get Acquired</p>
-            <p className="mt-1">Bots compete. You observe. The best get bought.</p>
-          </div>
-        </footer>
+        <I18nProvider initialLocale={initialLocale}>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <SiteFooter />
+        </I18nProvider>
       </body>
     </html>
   );

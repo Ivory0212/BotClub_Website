@@ -1,0 +1,152 @@
+"use client";
+
+import Link from "next/link";
+import { useI18n } from "@/components/i18n/I18nProvider";
+import type { Bot } from "@/types";
+import { formatWinRate, formatPrice } from "@/lib/utils";
+
+export default function LeaderboardContent({ bots }: { bots: Bot[] }) {
+  const { t } = useI18n();
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white">{t("leaderboard.title")}</h1>
+        <p className="mt-2 text-zinc-400">{t("leaderboard.subtitle", { count: bots.length })}</p>
+      </div>
+
+      <div className="mb-8 grid gap-4 sm:grid-cols-3">
+        {bots.slice(0, 3).map((bot, i) => {
+          const medals = ["🥇", "🥈", "🥉"];
+          const borderColors = [
+            "border-amber-500/50",
+            "border-zinc-400/50",
+            "border-amber-700/50",
+          ];
+          const bgColors = ["bg-amber-500/5", "bg-zinc-400/5", "bg-amber-700/5"];
+          const cReturn = bot.cumulative_return ?? 0;
+
+          return (
+            <Link
+              key={bot.id}
+              href={`/bot/${bot.id}`}
+              className={`flex flex-col items-center rounded-xl border ${borderColors[i]} ${bgColors[i]} p-6 transition-all hover:scale-[1.02]`}
+            >
+              <span className="text-4xl">{medals[i]}</span>
+              <span className="mt-2 text-4xl">{bot.avatar_emoji}</span>
+              <span className="mt-2 text-lg font-bold text-white">{bot.name}</span>
+              <span className="text-sm text-zinc-500">{bot.type_label}</span>
+              <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <div className="font-mono text-lg font-bold text-emerald-400">
+                    {formatWinRate(bot.win_rate)}
+                  </div>
+                  <div className="text-xs text-zinc-500">{t("leaderboard.winRate")}</div>
+                </div>
+                <div>
+                  <div
+                    className={`font-mono text-lg font-bold ${cReturn >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+                  >
+                    {cReturn >= 0 ? "+" : ""}
+                    {cReturn.toFixed(0)}
+                  </div>
+                  <div className="text-xs text-zinc-500">{t("leaderboard.pl")}</div>
+                </div>
+                <div>
+                  <div className="font-mono text-lg font-bold text-blue-400">
+                    {((bot.accuracy ?? 0) * 100).toFixed(0)}%
+                  </div>
+                  <div className="text-xs text-zinc-500">{t("leaderboard.accuracy")}</div>
+                </div>
+              </div>
+              <div className="mt-3 text-sm text-zinc-500">
+                {t("leaderboard.daysAlive", { n: bot.alive_days })}
+              </div>
+              <div className="mt-2 font-mono text-lg font-bold text-amber-400">
+                {formatPrice(bot.price)}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-zinc-800">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-zinc-800 bg-zinc-900/50 text-left text-xs uppercase text-zinc-500">
+              <th className="px-4 py-3">{t("leaderboard.rank")}</th>
+              <th className="px-4 py-3">{t("leaderboard.bot")}</th>
+              <th className="px-4 py-3">{t("leaderboard.type")}</th>
+              <th className="px-4 py-3 text-right">{t("leaderboard.winRate")}</th>
+              <th className="px-4 py-3 text-right">{t("leaderboard.cumulativePL")}</th>
+              <th className="px-4 py-3 text-right">{t("leaderboard.accuracy")}</th>
+              <th className="px-4 py-3 text-right">{t("leaderboard.streak")}</th>
+              <th className="px-4 py-3 text-right">{t("leaderboard.price")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {bots.map((bot) => {
+              const cReturn = bot.cumulative_return ?? 0;
+              return (
+                <tr
+                  key={bot.id}
+                  className="border-b border-zinc-800/50 transition-colors hover:bg-zinc-900/50"
+                >
+                  <td className="px-4 py-3">
+                    <span className="font-mono text-sm font-bold text-zinc-400">#{bot.rank}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/bot/${bot.id}`}
+                      className="flex items-center gap-2 hover:text-emerald-400"
+                    >
+                      <span className="text-lg">{bot.avatar_emoji}</span>
+                      <span className="font-medium text-white">{bot.name}</span>
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
+                      {bot.type_label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <span
+                      className={`font-mono text-sm font-bold ${
+                        bot.win_rate >= 0.6
+                          ? "text-emerald-400"
+                          : bot.win_rate >= 0.4
+                            ? "text-zinc-300"
+                            : "text-rose-400"
+                      }`}
+                    >
+                      {formatWinRate(bot.win_rate)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <span
+                      className={`font-mono text-sm font-bold ${cReturn >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+                    >
+                      {cReturn >= 0 ? "+" : ""}
+                      {cReturn.toFixed(0)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <span className="font-mono text-sm text-blue-400">
+                      {((bot.accuracy ?? 0) * 100).toFixed(0)}%
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-sm text-zinc-300">
+                    {bot.survival_streak ?? 0}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-sm font-bold text-amber-400">
+                    {formatPrice(bot.price)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

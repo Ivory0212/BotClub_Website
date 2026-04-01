@@ -3,13 +3,13 @@ import { purchaseBot } from "@/lib/store";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { botId } = body;
+  const { botId, buyerName } = body;
 
   if (!botId) {
     return NextResponse.json({ error: "botId is required" }, { status: 400 });
   }
 
-  const result = purchaseBot(botId);
+  const result = purchaseBot(botId, buyerName);
 
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 });
