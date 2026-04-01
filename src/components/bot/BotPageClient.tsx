@@ -19,9 +19,12 @@ export type BotRoundRow = {
 export default function BotPageClient({
   bot,
   botRounds,
+  purchaseContentAllowed,
 }: {
   bot: Bot;
   botRounds: BotRoundRow[];
+  /** When false: no checkout, no unlocked strategy blocks (avoids fuzzy / scrape risk before launch). */
+  purchaseContentAllowed: boolean;
 }) {
   const { t } = useI18n();
   const isSold = bot.status === "sold";
@@ -103,7 +106,7 @@ export default function BotPageClient({
         </div>
       </div>
 
-      {isSold ? (
+      {isSold && purchaseContentAllowed ? (
         <div className="mb-8 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-6">
           <h2 className="mb-4 text-lg font-bold text-emerald-400">{t("botPage.unlockedTitle")}</h2>
           <div className="space-y-4">
@@ -126,6 +129,14 @@ export default function BotPageClient({
               </pre>
             </div>
           </div>
+        </div>
+      ) : isSold && !purchaseContentAllowed ? (
+        <div className="mb-8 rounded-xl border border-amber-500/25 bg-amber-500/10 p-6 text-center">
+          <span className="text-3xl">🔒</span>
+          <h3 className="mt-2 text-lg font-bold text-amber-200">{t("botPage.purchaseContentLockedTitle")}</h3>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-zinc-400">
+            {t("botPage.purchaseContentLockedDesc")}
+          </p>
         </div>
       ) : (
         <div className="mb-8 rounded-xl border border-zinc-700 bg-zinc-900/50 p-6 text-center">

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import BotPageClient from "@/components/bot/BotPageClient";
 import type { BotRoundRow } from "@/components/bot/BotPageClient";
 import { getBotById, getAllSeasons } from "@/lib/store";
+import { isPurchaseAllowed } from "@/lib/site-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,11 @@ export default async function BotPage({ params }: { params: Promise<{ id: string
   const bot = getBotById(id);
 
   if (!bot) return notFound();
+
+  const purchaseContentAllowed = isPurchaseAllowed();
+  const botForClient = purchaseContentAllowed
+    ? bot
+    : { ...bot, hidden_persona: "", hidden_strategy: "", hidden_background: "" };
 
   const seasons = getAllSeasons();
   const botRounds: BotRoundRow[] = [];
@@ -30,5 +36,11 @@ export default async function BotPage({ params }: { params: Promise<{ id: string
     }
   }
 
-  return <BotPageClient bot={bot} botRounds={botRounds} />;
+  return (
+    <BotPageClient
+      bot={botForClient}
+      botRounds={botRounds}
+      purchaseContentAllowed={purchaseContentAllowed}
+    />
+  );
 }

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { purchaseBot } from "@/lib/store";
-import { isPreviewMode } from "@/lib/site-mode";
+import { isPurchaseAllowed } from "@/lib/site-mode";
 
 export async function POST(req: NextRequest) {
-  if (isPreviewMode()) {
+  if (!isPurchaseAllowed()) {
     return NextResponse.json(
-      { error: "PREVIEW_MODE", message: "Purchases are disabled in preview." },
+      { error: "PURCHASE_DISABLED", message: "Purchases are not open yet." },
       { status: 403 },
     );
   }

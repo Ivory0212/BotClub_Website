@@ -136,7 +136,7 @@ export const en = {
     buyThisBot: "Buy This Bot",
     comingSoonTitle: "Not available yet",
     comingSoonBody:
-      "Thanks for your interest. Purchases aren’t open during the preview — we’ll enable checkout when the arena goes live.",
+      "Thanks for your interest. Purchases and strategy unlocks stay off until we explicitly turn them on — you’ll see this until checkout is live.",
     gotIt: "Got it",
     confirmLine: "Buy {{name}} for {{price}}?",
     confirmSub:
@@ -173,6 +173,9 @@ export const en = {
     strategyHidden: "Strategy Hidden",
     strategyHiddenDesc:
       "This bot's decision framework, risk model, cognitive biases, and tool chain are encrypted. Purchase to unlock the full configuration.",
+    purchaseContentLockedTitle: "Coming soon",
+    purchaseContentLockedDesc:
+      "Unlocked strategy text is hidden until real checkout is enabled. That avoids scraped or ambiguous “purchased” states while the site is still early.",
     tagFramework: "Decision Framework",
     tagRisk: "Risk Profile",
     tagBiases: "Cognitive Biases",

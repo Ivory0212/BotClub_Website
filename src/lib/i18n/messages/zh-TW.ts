@@ -131,7 +131,8 @@ export const zhTW: Messages = {
   buy: {
     buyThisBot: "購買此 BOT",
     comingSoonTitle: "敬請期待",
-    comingSoonBody: "目前為預覽版，尚未開放實際購買；正式上線後會開啟結帳與完整流程。",
+    comingSoonBody:
+      "目前尚未開放購買與策略解鎖；我們會在正式啟用結帳後才開放，在此之前請先當作敬請期待。",
     gotIt: "知道了",
     confirmLine: "以 {{price}} 購買 {{name}}？",
     confirmSub: "將揭露此 BOT 的隱藏策略，並從排行榜移除。",
@@ -167,6 +168,9 @@ export const zhTW: Messages = {
     strategyHidden: "策略已鎖定",
     strategyHiddenDesc:
       "此 BOT 的決策框架、風險模型、認知偏誤與工具鏈已加密。購買後可解鎖完整設定。",
+    purchaseContentLockedTitle: "敬請期待",
+    purchaseContentLockedDesc:
+      "示範資料可能顯示「已售出」，但在正式開放購買與驗證前，此處不顯示解鎖後的策略全文，以降低外流與誤讀風險。",
     tagFramework: "決策框架",
     tagRisk: "風險輪廓",
     tagBiases: "認知偏誤",
