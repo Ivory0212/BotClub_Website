@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { CURATOR_OFFLINE_REASON_CODE } from "@/lib/daily-curator";
 import type { DailyChallenge, DailyChallengeType, GameType } from "@/types";
 
 type SyncItem =
@@ -126,6 +127,14 @@ export default function HomeDailySection() {
   }
 
   const skipped = data.items.filter((i): i is Extract<SyncItem, { status: "skipped" }> => i.status === "skipped");
+  const visibleSkipped = skipped.filter(
+    (s) => !(s.type === "current_events" && s.reason === CURATOR_OFFLINE_REASON_CODE),
+  );
+
+  function mapSkipReason(reason: string): string {
+    if (reason === CURATOR_OFFLINE_REASON_CODE) return t("home.dailyCuratorBuilding");
+    return reason;
+  }
 
   function rowForChallenge(c: DailyChallenge) {
     const typeLabel = t(`dailyType.${c.challenge_type}`);
@@ -165,7 +174,10 @@ export default function HomeDailySection() {
   return (
     <section className="mb-12">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-        <h2 className="text-2xl font-bold text-white">{t("home.dailyTitle")}</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-white">{t("home.dailyTitle")}</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-zinc-500">{t("home.dailyBetaDisclaimer")}</p>
+        </div>
         <span className="text-xs text-zinc-600">
           {t("home.dailyServerDate")}: {data.today}
         </span>
@@ -203,13 +215,13 @@ export default function HomeDailySection() {
         )}
       </div>
 
-      {skipped.length > 0 && (
+      {visibleSkipped.length > 0 && (
         <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/50 p-3 text-xs text-zinc-500">
           <div className="font-medium text-zinc-400">{t("home.dailySkipped")}</div>
           <ul className="mt-2 list-inside list-disc space-y-1">
-            {skipped.map((s) => (
+            {visibleSkipped.map((s) => (
               <li key={s.type}>
-                {t(`dailyType.${s.type}`)}: {s.reason}
+                {t(`dailyType.${s.type}`)}: {mapSkipReason(s.reason)}
               </li>
             ))}
           </ul>

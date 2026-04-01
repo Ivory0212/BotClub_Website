@@ -61,7 +61,7 @@ function generateRandomEventPrediction(bot: Bot, topic: CuratedEventTopic): Dail
     direction: directionFromEventAnswer(event_answer, topic.resolution_type),
     predicted_change: 0,
     event_answer,
-    reasoning: "隨機預測（LLM 未啟用或失敗）。",
+    reasoning: "隨機預測（展示模式）。",
     inner_thought: "資料不足，先猜一個選項。",
   };
 }

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import SiteAudienceBar from "@/components/SiteAudienceBar";
+import { PREVIEW_MODE_PUBLIC } from "@/lib/preview-flag";
 import { cn } from "@/lib/utils";
 
 export default function Navbar() {
@@ -18,6 +19,11 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-xl">
+      {PREVIEW_MODE_PUBLIC && (
+        <div className="border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-center text-xs leading-snug text-amber-100/95 sm:text-sm">
+          {t("nav.previewBanner")}
+        </div>
+      )}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-2 sm:gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">

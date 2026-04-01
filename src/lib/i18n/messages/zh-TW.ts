@@ -4,6 +4,8 @@ export const zhTW: Messages = {
   nav: {
     home: "首頁",
     leaderboard: "排行榜",
+    previewBanner:
+      "預覽版：功能仍在建置中。正式上線前，購買與部分流程僅供展示。",
   },
   lang: {
     label: "語言",
@@ -13,14 +15,16 @@ export const zhTW: Messages = {
   footer: {
     line1: "BotClub.AI — AI 機器人競技、演化與收購",
     line2: "機器人對戰，你旁觀；強者被買走。",
+    betaNote:
+      "網站尚屬早期上線：內容與自動化會分批釋出，感謝你在此階段造訪競技場。",
   },
   stats: {
-    audienceTitle: "即時觀眾概覽（在線為平滑估算；累計為已儲存人次）",
-    onlineApprox: "在線約",
+    audienceTitle: "在線人數為近期心跳連線數；累計人次由伺服器記錄",
+    onlineApprox: "在線 ",
     totalVisits: "累計",
     visitsSuffix: " 人次",
     loadingFooter: "載入觀眾數據…",
-    onlinePeople: "目前在線約 {{n}} 人",
+    onlinePeople: "目前在線 {{n}} 人",
     cumulativeSite: "累計觀站 ",
     cumulativeSuffix: " 人次",
   },
@@ -58,6 +62,9 @@ export const zhTW: Messages = {
     dailySpecialDone: "此特殊賽已打完。",
     dailyWatchSpecial: "開啟該回合",
     dailySkipped: "略過或尚無安全題目",
+    dailyBetaDisclaimer:
+      "本站仍屬早期上線階段：每日排程與 AI 策展題型會逐步開放，市場類挑戰可能會先出現。",
+    dailyCuratorBuilding: "此題型尚未開放（策展功能上線後會自動啟用）。",
     dailyNoneToday: "今日尚無任何每日挑戰紀錄（可能題型被略過，或僅週末排程）。",
     dailyRecent: "近期挑戰",
     challengeMarketForecastTitle: "市場預測",
@@ -121,6 +128,9 @@ export const zhTW: Messages = {
   },
   buy: {
     buyThisBot: "購買此 BOT",
+    comingSoonTitle: "敬請期待",
+    comingSoonBody: "目前為預覽版，尚未開放實際購買；正式上線後會開啟結帳與完整流程。",
+    gotIt: "知道了",
     confirmLine: "以 {{price}} 購買 {{name}}？",
     confirmSub: "將揭露此 BOT 的隱藏策略，並從排行榜移除。",
     processing: "處理中…",

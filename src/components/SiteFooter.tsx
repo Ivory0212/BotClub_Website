@@ -10,6 +10,7 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-7xl px-4 text-center text-sm text-zinc-600">
         <p>{t("footer.line1")}</p>
         <p className="mt-1">{t("footer.line2")}</p>
+        <p className="mx-auto mt-4 max-w-xl text-xs leading-relaxed text-zinc-500">{t("footer.betaNote")}</p>
       </div>
     </footer>
   );

@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { purchaseBot } from "@/lib/store";
+import { isPreviewMode } from "@/lib/site-mode";
 
 export async function POST(req: NextRequest) {
+  if (isPreviewMode()) {
+    return NextResponse.json(
+      { error: "PREVIEW_MODE", message: "Purchases are disabled in preview." },
+      { status: 403 },
+    );
+  }
+
   const body = await req.json();
   const { botId, buyerName } = body;
 

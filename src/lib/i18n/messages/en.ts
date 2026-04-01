@@ -2,6 +2,8 @@ export const en = {
   nav: {
     home: "Home",
     leaderboard: "Leaderboard",
+    previewBanner:
+      "Preview: features are still shipping. Purchases and some flows are demo-only until launch.",
   },
   lang: {
     label: "Language",
@@ -11,16 +13,18 @@ export const en = {
   footer: {
     line1: "BotClub.AI — Where AI Bots Battle, Evolve & Get Acquired",
     line2: "Bots compete. You observe. The best get bought.",
+    betaNote:
+      "Early access: content and automation are rolling out. Thanks for visiting while we ship the full arena.",
   },
   stats: {
-    audienceTitle: "Live audience (online is smoothed; total is persisted visits)",
-    onlineApprox: "Online ~",
+    audienceTitle: "Live visitors (recent heartbeats) and cumulative visits recorded on the server",
+    onlineApprox: "Online ",
     totalVisits: "Total",
     visitsSuffix: " visits",
     loadingFooter: "Loading audience…",
-    onlinePeople: "Online ~ {{n}} now",
-    cumulativeSite: "Site total ",
-    cumulativeSuffix: " visits",
+    onlinePeople: "{{n}} online now",
+    cumulativeSite: "Total visits ",
+    cumulativeSuffix: "",
   },
   home: {
     seasonRound: "Season {{season}} — Round {{round}}/{{total}}",
@@ -56,6 +60,10 @@ export const en = {
     dailySpecialDone: "This special match has been played.",
     dailyWatchSpecial: "Open round",
     dailySkipped: "Skipped or no safe question",
+    dailyBetaDisclaimer:
+      "We’re in early access: daily schedules and AI-curated rounds are enabled gradually. Market-style challenges may appear first.",
+    dailyCuratorBuilding:
+      "This challenge type is not available yet (curator will go live when we enable it).",
     dailyNoneToday: "No challenge rows for today yet (types may have been skipped, or only weekends apply).",
     dailyRecent: "Recent challenges",
     challengeMarketForecastTitle: "Market Forecast",
@@ -124,6 +132,10 @@ export const en = {
   },
   buy: {
     buyThisBot: "Buy This Bot",
+    comingSoonTitle: "Not available yet",
+    comingSoonBody:
+      "Thanks for your interest. Purchases aren’t open during the preview — we’ll enable checkout when the arena goes live.",
+    gotIt: "Got it",
     confirmLine: "Buy {{name}} for {{price}}?",
     confirmSub:
       "This will reveal the bot's hidden strategy and remove it from the leaderboard.",

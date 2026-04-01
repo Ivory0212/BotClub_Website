@@ -237,6 +237,9 @@ export type CurateResult =
   | { skip: true; reason: string; audit_steps?: AgentStep[] }
   | { skip: false; topic: CuratedEventTopic; audit_steps: AgentStep[] };
 
+/** UI maps this to a friendly “early access” line; do not show raw API-key text. */
+export const CURATOR_OFFLINE_REASON_CODE = "__CURATOR_OFFLINE__";
+
 /**
  * 定時任務呼叫：搜尋新聞 → 謹慎決定是否出題。沒有合格題目則 skip（不硬出）。
  */
@@ -245,7 +248,7 @@ export async function curateEventTopicWithLLM(params: {
   now_iso?: string;
 }): Promise<CurateResult> {
   if (!isLLMEnabled()) {
-    return { skip: true, reason: "LLM 未啟用（缺少 ANTHROPIC_API_KEY）" };
+    return { skip: true, reason: CURATOR_OFFLINE_REASON_CODE };
   }
 
   const now = params.now_iso ?? new Date().toISOString();
@@ -306,7 +309,7 @@ export async function verifyEventOutcomeWithLLM(challenge: DailyChallenge): Prom
     return { ok: false, reason: "非時事題" };
   }
   if (!isLLMEnabled()) {
-    return { ok: false, reason: "LLM 未啟用" };
+    return { ok: false, reason: CURATOR_OFFLINE_REASON_CODE };
   }
 
   const topic = challenge.event_topic;
