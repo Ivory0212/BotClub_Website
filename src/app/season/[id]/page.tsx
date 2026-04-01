@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import SeasonPageClient from "@/components/season/SeasonPageClient";
 import { getSeasonById } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+
 export default async function SeasonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const season = getSeasonById(id);

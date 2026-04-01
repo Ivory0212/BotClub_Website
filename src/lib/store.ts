@@ -43,8 +43,13 @@ function persistGlobal() {
   globalStore.__botclub_initialized = initialized;
 }
 
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+/** Stable across Vercel instances (was random + Date.now → Watch Season / bot links 404 on cold starts). */
+function leagueIdForMonth(monthStr: string): string {
+  return `league-${monthStr}`;
+}
+
+function nextStableBotId(): string {
+  return `bot-${bots.length}`;
 }
 
 // ─── BOT PRICING & RANKING ────────────────────────────────
@@ -86,7 +91,7 @@ export function initializeStore() {
     const aliveDays = Math.floor(Math.random() * 30) + 1;
 
     const bot: Bot = {
-      id: generateId(),
+      id: `bot-${i}`,
       name: persona.name,
       type_label: persona.type_label,
       avatar_emoji: persona.avatar_emoji,
@@ -129,7 +134,7 @@ function generateDemoLeague() {
   const specialSchedule = generateMonthlySpecialSchedule(monthStr);
 
   const league: MonthlyLeague = {
-    id: generateId(),
+    id: leagueIdForMonth(monthStr),
     month: monthStr,
     status: "active",
     started_at: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
@@ -203,7 +208,7 @@ function generateDemoDailyChallenge(leagueId: string, type: DailyChallengeType, 
       };
     });
     return {
-      id: `demo-${type}-${date}-${generateId()}`,
+      id: `demo-${leagueId}-${type}-${date}`,
       league_id: leagueId,
       date,
       challenge_type: type,
@@ -259,7 +264,7 @@ function generateDemoDailyChallenge(leagueId: string, type: DailyChallengeType, 
   });
 
   return {
-    id: `demo-${type}-${date}-${generateId()}`,
+    id: `demo-${leagueId}-${type}-${date}`,
     league_id: leagueId,
     date,
     challenge_type: type,
@@ -593,7 +598,7 @@ export async function runSpecialEvent(gameType: GameType): Promise<Round | null>
   const result = await simulateRound(gameType, activeBots);
 
   const round: Round = {
-    id: generateId(),
+    id: `round-${league.id}-${league.special_events.length + 1}-${gameType}`,
     season_id: league.id,
     round_number: league.special_events.length + 1,
     game_type: gameType,
@@ -722,7 +727,7 @@ export function settleMonth(): MonthlyLeague | null {
   for (let i = 0; i < eliminateCount; i++) {
     const persona = generateBotPersona();
     const newBot: Bot = {
-      id: generateId(),
+      id: nextStableBotId(),
       name: persona.name,
       type_label: persona.type_label,
       avatar_emoji: persona.avatar_emoji,
@@ -756,7 +761,7 @@ export function settleMonth(): MonthlyLeague | null {
   const nextMonthStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}`;
 
   const nextLeague: MonthlyLeague = {
-    id: generateId(),
+    id: leagueIdForMonth(nextMonthStr),
     month: nextMonthStr,
     status: "active",
     started_at: nextMonth.toISOString(),
@@ -803,7 +808,7 @@ export function purchaseBot(botId: string, buyerName?: string): { success: boole
   // Generate replacement
   const persona = generateBotPersona();
   const newBot: Bot = {
-    id: generateId(),
+    id: nextStableBotId(),
     name: persona.name,
     type_label: persona.type_label,
     avatar_emoji: persona.avatar_emoji,

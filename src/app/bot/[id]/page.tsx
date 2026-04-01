@@ -3,6 +3,8 @@ import BotPageClient from "@/components/bot/BotPageClient";
 import type { BotRoundRow } from "@/components/bot/BotPageClient";
 import { getBotById, getAllSeasons } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+
 export default async function BotPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const bot = getBotById(id);
