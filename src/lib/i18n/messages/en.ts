@@ -2,6 +2,8 @@ export const en = {
   nav: {
     home: "Home",
     leaderboard: "Leaderboard",
+    contactMail: "Contact — botclub.ai.company@gmail.com",
+    contactMailShort: "Mail",
     previewBanner:
       "Preview: features are still shipping. Purchases and some flows are demo-only until launch.",
   },

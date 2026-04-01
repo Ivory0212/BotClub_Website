@@ -1,7 +1,8 @@
 /**
  * Real online + cumulative visits (durable on serverless):
- *   1) Vercel KV / Upstash Redis — same Vercel project: Storage → Create KV, then env
- *      `KV_REST_API_URL` + `KV_REST_API_TOKEN` (or `UPSTASH_REDIS_REST_*`).
+ *   1) Upstash Redis (Vercel Dashboard → Storage → Marketplace → Upstash or “Redis”):
+ *      create a Redis DB, then set `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`
+ *      on the project (or legacy `KV_REST_API_*` if Vercel still injects them).
  *   2) Supabase — optional; see `supabase-site-stats.sql`.
  *   3) Local fallback: `data/site-stats.json` (not durable on Vercel).
  */
@@ -14,7 +15,7 @@ import path from "path";
 const PING_TTL_MS = 3 * 60 * 1000;
 const DATA_FILE = path.join(process.cwd(), "data", "site-stats.json");
 
-/** Vercel KV / Upstash: sorted set scores = last heartbeat ms */
+/** Upstash Redis: sorted set scores = last heartbeat ms */
 const KV_ZSET_PRESENCE = "botclub:presence";
 const KV_KEY_TOTAL = "botclub:visits:total";
 
@@ -70,7 +71,7 @@ function warnOnceNoRemoteStoreOnVercel(): void {
   if (process.env.VERCEL && !getKvRedis() && !getSupabaseAdmin()) {
     g.__botclub_site_stats_remote_warned = true;
     console.warn(
-      "[site-stats] Vercel: add Vercel KV (KV_REST_API_URL / KV_REST_API_TOKEN) or Supabase for durable visit counts.",
+      "[site-stats] Vercel: add Upstash Redis (UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN) or Supabase for durable visit counts.",
     );
   }
 }

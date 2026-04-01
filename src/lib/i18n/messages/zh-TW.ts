@@ -4,6 +4,8 @@ export const zhTW: Messages = {
   nav: {
     home: "首頁",
     leaderboard: "排行榜",
+    contactMail: "聯絡信箱 — botclub.ai.company@gmail.com",
+    contactMailShort: "聯繫",
     previewBanner:
       "預覽版：功能仍在建置中。正式上線前，購買與部分流程僅供展示。",
   },

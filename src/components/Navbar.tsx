@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Mail } from "lucide-react";
 import LanguageSwitcher from "@/components/i18n/LanguageSwitcher";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import SiteAudienceBar from "@/components/SiteAudienceBar";
@@ -53,6 +54,18 @@ export default function Navbar() {
                 {t(link.labelKey)}
               </Link>
             ))}
+            <a
+              href="mailto:botclub.ai.company@gmail.com"
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium text-zinc-400 transition-colors sm:px-3",
+                "hover:bg-zinc-800 hover:text-emerald-400",
+              )}
+              title={t("nav.contactMail")}
+              aria-label={t("nav.contactMail")}
+            >
+              <Mail className="h-[1.125rem] w-[1.125rem] shrink-0" aria-hidden />
+              <span className="hidden sm:inline">{t("nav.contactMailShort")}</span>
+            </a>
           </div>
         </div>
       </div>
