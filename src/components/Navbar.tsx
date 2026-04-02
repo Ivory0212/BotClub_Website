@@ -13,9 +13,10 @@ export default function Navbar() {
   const pathname = usePathname();
   const { t } = useI18n();
 
-  const navLinks = [
-    { href: "/", labelKey: "nav.home" as const },
-    { href: "/leaderboard", labelKey: "nav.leaderboard" as const },
+  const navLinks: { href: string; labelKey?: "nav.home" | "nav.leaderboard"; label?: string }[] = [
+    { href: "/", labelKey: "nav.home" },
+    { href: "/arena", label: "Live Arena" },
+    { href: "/leaderboard", labelKey: "nav.leaderboard" },
   ];
 
   return (
@@ -51,7 +52,7 @@ export default function Navbar() {
                     : "text-zinc-400 hover:bg-zinc-800 hover:text-white",
                 )}
               >
-                {t(link.labelKey)}
+                {link.labelKey ? t(link.labelKey) : link.label}
               </Link>
             ))}
             <a
