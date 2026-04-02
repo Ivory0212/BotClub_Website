@@ -5,15 +5,21 @@ import {
   type ArenaBot,
   type ArenaEvent,
   type ArenaState,
-  type HexCell,
-  type HexKey,
   executeTurn,
-  getGridBounds,
-  hexKey,
   hexToPixel,
   initArena,
   parseHex,
 } from "@/lib/arena-engine";
+import {
+  deriveMatchSeed,
+  deriveTurnSeed,
+  formatCountdown,
+  getCurrentSlotStartUtc,
+  MATCH_INTERVAL_MS,
+  msUntilNextSlotUtc,
+  REAL_MS_PER_TURN,
+  SCHEDULED_MAX_TURNS,
+} from "@/lib/arena-schedule";
 
 // ─── Animation Types ──────────────────────────────────────────────────
 
@@ -50,7 +56,6 @@ interface PulseAnimation {
 const HEX_SIZE = 22;
 const GRID_RADIUS = 7;
 const BOT_COUNT = 8;
-const SQRT3 = Math.sqrt(3);
 
 // ─── Helper: Draw Hex ─────────────────────────────────────────────────
 
@@ -91,40 +96,60 @@ export default function ArenaGame() {
   const particlesRef = useRef<Particle[]>([]);
   const attackAnimsRef = useRef<AttackAnimation[]>([]);
   const pulseAnimsRef = useRef<PulseAnimation[]>([]);
-  const turnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const slotStartRef = useRef<number>(getCurrentSlotStartUtc());
 
   const [gameState, setGameState] = useState<ArenaState | null>(null);
   const [events, setEvents] = useState<ArenaEvent[]>([]);
-  const [speed, setSpeed] = useState<number>(3000); // ms per turn
-  const [isRunning, setIsRunning] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [selectedBot, setSelectedBot] = useState<ArenaBot | null>(null);
+  const [countdownMs, setCountdownMs] = useState(0);
+  const [slotLabel, setSlotLabel] = useState("");
 
-  const speedRef = useRef(speed);
-  const isRunningRef = useRef(isRunning);
-
+  const canvasSizeRef = useRef(canvasSize);
   useEffect(() => {
-    speedRef.current = speed;
-  }, [speed]);
-  useEffect(() => {
-    isRunningRef.current = isRunning;
-  }, [isRunning]);
+    canvasSizeRef.current = canvasSize;
+  }, [canvasSize]);
 
-  // ─── Initialize Game ──────────────────────────────────────────────
+  const spawnParticles = useCallback(
+    (x: number, y: number, color: string, count: number) => {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const sp = 0.5 + Math.random() * 2;
+        particlesRef.current.push({
+          x,
+          y,
+          vx: Math.cos(angle) * sp,
+          vy: Math.sin(angle) * sp,
+          life: 1,
+          maxLife: 0.5 + Math.random() * 0.5,
+          color,
+          size: 1.5 + Math.random() * 2.5,
+        });
+      }
+    },
+    [],
+  );
 
-  const initGame = useCallback(() => {
-    if (turnTimerRef.current) clearTimeout(turnTimerRef.current);
-    const state = initArena(BOT_COUNT, GRID_RADIUS, Date.now());
-    gameStateRef.current = state;
-    setGameState({ ...state });
-    setEvents([]);
-    setIsRunning(false);
-    setSelectedBot(null);
-    particlesRef.current = [];
-    attackAnimsRef.current = [];
-    pulseAnimsRef.current = [];
-  }, []);
+  const startNewSlot = useCallback(
+    (slotStart: number) => {
+      slotStartRef.current = slotStart;
+      const seed = deriveMatchSeed(slotStart);
+      const state = initArena(BOT_COUNT, GRID_RADIUS, seed);
+      gameStateRef.current = state;
+      setGameState({ ...state });
+      setEvents([]);
+      setSelectedBot(null);
+      particlesRef.current = [];
+      attackAnimsRef.current = [];
+      pulseAnimsRef.current = [];
+      const d = new Date(slotStart);
+      setSlotLabel(
+        `${d.getUTCHours().toString().padStart(2, "0")}:${d.getUTCMinutes().toString().padStart(2, "0")} UTC`,
+      );
+    },
+    [],
+  );
 
   // ─── Viewer Count Simulation ──────────────────────────────────────
 
@@ -153,116 +178,114 @@ export default function ArenaGame() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ─── Init on mount ───────────────────────────────────────────────
+  // ─── Init first slot ─────────────────────────────────────────────
 
   useEffect(() => {
-    initGame();
-  }, [initGame]);
+    startNewSlot(getCurrentSlotStartUtc());
+  }, [startNewSlot]);
 
-  // ─── Spawn Particles ──────────────────────────────────────────────
+  // ─── Scheduled tick: catch-up + live turns (wall-clock aligned) ───
 
-  const spawnParticles = useCallback(
-    (x: number, y: number, color: string, count: number) => {
-      for (let i = 0; i < count; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 0.5 + Math.random() * 2;
-        particlesRef.current.push({
-          x,
-          y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 1,
-          maxLife: 0.5 + Math.random() * 0.5,
-          color,
-          size: 1.5 + Math.random() * 2.5,
-        });
+  useEffect(() => {
+    const tick = () => {
+      const now = Date.now();
+      const slot = getCurrentSlotStartUtc(now);
+
+      if (slot !== slotStartRef.current) {
+        startNewSlot(slot);
+        return;
       }
-    },
-    [],
-  );
 
-  // ─── Execute Next Turn ────────────────────────────────────────────
+      const state = gameStateRef.current;
+      if (!state) return;
 
-  const doTurn = useCallback(() => {
-    const state = gameStateRef.current;
-    if (!state || state.gameOver) {
-      setIsRunning(false);
-      return;
-    }
+      setCountdownMs(msUntilNextSlotUtc(now));
 
-    const seed = Date.now() + state.turn * 7919;
-    const turnEvents = executeTurn(state, seed);
+      if (state.gameOver) {
+        setGameState({ ...state });
+        return;
+      }
 
-    // Create visual effects for events
-    for (const evt of turnEvents) {
-      if (evt.targetCell) {
-        const [q, r] = parseHex(evt.targetCell);
-        const { x, y } = hexToPixel(q, r, HEX_SIZE);
-        const cx = canvasSize.width / 2 + x;
-        const cy = canvasSize.height / 2 + y;
+      const elapsed = now - slot;
+      const targetTurn = Math.min(
+        SCHEDULED_MAX_TURNS,
+        Math.floor(elapsed / REAL_MS_PER_TURN),
+      );
+      const delta = targetTurn - state.turn;
 
-        if (evt.type === "capture" || evt.type === "eliminate") {
-          spawnParticles(cx, cy, evt.botColor, evt.type === "eliminate" ? 30 : 15);
-          attackAnimsRef.current.push({
-            fromX: cx - 20 + Math.random() * 40,
-            fromY: cy - 20 + Math.random() * 40,
-            toX: cx,
-            toY: cy,
-            color: evt.botColor,
-            progress: 0,
-            success: true,
-          });
-        } else if (evt.type === "defend") {
-          pulseAnimsRef.current.push({
-            x: cx,
-            y: cy,
-            color: evt.botColor,
-            progress: 0,
-          });
-        } else if (evt.type === "expand") {
-          pulseAnimsRef.current.push({
-            x: cx,
-            y: cy,
-            color: evt.botColor,
-            progress: 0,
-          });
+      if (delta <= 0) return;
+
+      const W = canvasSizeRef.current.width;
+      const H = canvasSizeRef.current.height;
+
+      const runSilentTurn = () => {
+        const s = gameStateRef.current;
+        if (!s || s.gameOver) return false;
+        const turnNum = s.turn + 1;
+        executeTurn(s, deriveTurnSeed(slot, turnNum));
+        setGameState({ ...s, bots: [...s.bots] });
+        setEvents(s.events.slice(-50).reverse());
+        return !s.gameOver;
+      };
+
+      const runLiveTurn = () => {
+        const s = gameStateRef.current;
+        if (!s || s.gameOver) return;
+        const turnNum = s.turn + 1;
+        const turnEvents = executeTurn(s, deriveTurnSeed(slot, turnNum));
+
+        for (const evt of turnEvents) {
+          if (evt.targetCell) {
+            const [q, r] = parseHex(evt.targetCell);
+            const { x, y } = hexToPixel(q, r, HEX_SIZE);
+            const cx = W / 2 + x;
+            const cy = H / 2 + y;
+
+            if (evt.type === "capture" || evt.type === "eliminate") {
+              spawnParticles(cx, cy, evt.botColor, evt.type === "eliminate" ? 30 : 15);
+              attackAnimsRef.current.push({
+                fromX: cx - 20 + Math.random() * 40,
+                fromY: cy - 20 + Math.random() * 40,
+                toX: cx,
+                toY: cy,
+                color: evt.botColor,
+                progress: 0,
+                success: true,
+              });
+            } else if (evt.type === "defend" || evt.type === "expand") {
+              pulseAnimsRef.current.push({
+                x: cx,
+                y: cy,
+                color: evt.botColor,
+                progress: 0,
+              });
+            }
+          }
         }
-      }
-    }
 
-    setGameState({ ...state, bots: [...state.bots] });
-    setEvents((prev) => [...turnEvents, ...prev].slice(0, 50));
+        setGameState({ ...s, bots: [...s.bots] });
+        setEvents((prev) => [...turnEvents, ...prev].slice(0, 50));
+      };
 
-    // Schedule next turn
-    if (!state.gameOver && isRunningRef.current) {
-      turnTimerRef.current = setTimeout(doTurn, speedRef.current);
-    }
-  }, [canvasSize, spawnParticles]);
-
-  // ─── Start/Pause ─────────────────────────────────────────────────
-
-  const toggleRunning = useCallback(() => {
-    if (gameStateRef.current?.gameOver) {
-      initGame();
-      return;
-    }
-    setIsRunning((prev) => {
-      const next = !prev;
-      if (next) {
-        // Start
-        setTimeout(doTurn, 300);
+      if (delta > 1) {
+        const batch = Math.min(delta, 50);
+        for (let i = 0; i < batch; i++) {
+          if (!runSilentTurn()) break;
+        }
       } else {
-        if (turnTimerRef.current) clearTimeout(turnTimerRef.current);
+        runLiveTurn();
       }
-      return next;
-    });
-  }, [doTurn, initGame]);
+    };
+
+    const id = setInterval(tick, 250);
+    tick();
+    return () => clearInterval(id);
+  }, [startNewSlot, spawnParticles]);
 
   // ─── Cleanup ──────────────────────────────────────────────────────
 
   useEffect(() => {
     return () => {
-      if (turnTimerRef.current) clearTimeout(turnTimerRef.current);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
   }, []);
@@ -270,9 +293,9 @@ export default function ArenaGame() {
   // ─── Canvas Render Loop ───────────────────────────────────────────
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const initialCanvas = canvasRef.current;
+    if (!initialCanvas) return;
+    const ctx = initialCanvas.getContext("2d");
     if (!ctx) return;
 
     let lastTime = 0;
@@ -281,26 +304,25 @@ export default function ArenaGame() {
       const dt = Math.min((time - lastTime) / 1000, 0.1);
       lastTime = time;
 
+      const surface = canvasRef.current;
       const state = gameStateRef.current;
-      if (!state || !ctx) {
+      if (!surface || !state || !ctx) {
         animFrameRef.current = requestAnimationFrame(render);
         return;
       }
 
       const W = canvasSize.width;
       const H = canvasSize.height;
-      canvas!.width = W * window.devicePixelRatio;
-      canvas!.height = H * window.devicePixelRatio;
+      surface.width = W * window.devicePixelRatio;
+      surface.height = H * window.devicePixelRatio;
       ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
 
-      // Clear
       ctx.fillStyle = "#09090b";
       ctx.fillRect(0, 0, W, H);
 
       const offsetX = W / 2;
       const offsetY = H / 2;
 
-      // Draw grid
       for (const [key, cell] of state.grid) {
         const [q, r] = parseHex(key);
         const { x, y } = hexToPixel(q, r, HEX_SIZE);
@@ -314,17 +336,14 @@ export default function ArenaGame() {
             const alpha = cell.fortified ? 0.55 : 0.35;
             drawHex(ctx, cx, cy, HEX_SIZE - 1, `rgba(${cr},${cg},${cb},${alpha})`, `rgba(${cr},${cg},${cb},0.6)`, cell.fortified ? 2 : 1);
 
-            // Fortification indicator
             if (cell.fortified) {
               drawHex(ctx, cx, cy, HEX_SIZE - 4, null, `rgba(${cr},${cg},${cb},0.3)`, 1);
             }
           }
         } else {
-          // Empty cell
           const baseAlpha = cell.resource ? 0.15 : 0.04;
           drawHex(ctx, cx, cy, HEX_SIZE - 1, `rgba(39,39,42,${baseAlpha})`, "rgba(63,63,70,0.2)", 0.5);
 
-          // Resource glow
           if (cell.resource) {
             ctx.beginPath();
             ctx.arc(cx, cy, 4, 0, Math.PI * 2);
@@ -338,7 +357,6 @@ export default function ArenaGame() {
         }
       }
 
-      // Draw bot base indicators (emoji text)
       ctx.font = `${HEX_SIZE * 0.9}px serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -351,13 +369,12 @@ export default function ArenaGame() {
         ctx.fillText(bot.emoji, cx, cy + 1);
       }
 
-      // Update and draw particles
       const particles = particlesRef.current;
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.05; // gravity
+        p.vy += 0.05;
         p.life -= dt / p.maxLife;
         if (p.life <= 0) {
           particles.splice(i, 1);
@@ -369,7 +386,6 @@ export default function ArenaGame() {
         ctx.fill();
       }
 
-      // Update and draw attack animations
       const attacks = attackAnimsRef.current;
       for (let i = attacks.length - 1; i >= 0; i--) {
         const a = attacks[i];
@@ -389,14 +405,12 @@ export default function ArenaGame() {
         ctx.lineWidth = 2 * (1 - t);
         ctx.stroke();
 
-        // Projectile glow
         ctx.beginPath();
         ctx.arc(lx, ly, 3, 0, Math.PI * 2);
         ctx.fillStyle = a.color;
         ctx.fill();
       }
 
-      // Update and draw pulse animations
       const pulses = pulseAnimsRef.current;
       for (let i = pulses.length - 1; i >= 0; i--) {
         const p = pulses[i];
@@ -412,7 +426,6 @@ export default function ArenaGame() {
         ctx.stroke();
       }
 
-      // Scanline effect (subtle)
       for (let y = 0; y < H; y += 4) {
         ctx.fillStyle = "rgba(0,0,0,0.03)";
         ctx.fillRect(0, y, W, 1);
@@ -427,34 +440,31 @@ export default function ArenaGame() {
     };
   }, [canvasSize]);
 
-  // ─── Derived State ────────────────────────────────────────────────
-
   const aliveBots = gameState?.bots.filter((b) => !b.eliminated).sort((a, b) => b.territory - a.territory) ?? [];
   const eliminatedBots = gameState?.bots.filter((b) => b.eliminated).sort((a, b) => (b.eliminatedTurn ?? 0) - (a.eliminatedTurn ?? 0)) ?? [];
 
-  // ─── Render ───────────────────────────────────────────────────────
+  const isLive = gameState && !gameState.gameOver;
+  const headerStatus = gameState?.gameOver ? "ENDED" : isLive ? "LIVE" : "READY";
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      {/* Top Bar - LIVE indicator */}
       <div className="border-b border-zinc-800 bg-zinc-950/90 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="relative flex h-3 w-3">
-                <span className={`absolute inline-flex h-full w-full rounded-full ${isRunning ? "animate-ping bg-red-400 opacity-75" : "bg-zinc-600"}`} />
-                <span className={`relative inline-flex h-3 w-3 rounded-full ${isRunning ? "bg-red-500" : "bg-zinc-500"}`} />
+                <span
+                  className={`absolute inline-flex h-full w-full rounded-full ${isLive ? "animate-ping bg-red-400 opacity-75" : "bg-zinc-600"}`}
+                />
+                <span className={`relative inline-flex h-3 w-3 rounded-full ${isLive ? "bg-red-500" : "bg-zinc-500"}`} />
               </span>
-              <span className={`text-sm font-bold ${isRunning ? "text-red-400" : "text-zinc-500"}`}>
-                {isRunning ? "LIVE" : gameState?.gameOver ? "ENDED" : "READY"}
-              </span>
+              <span className={`text-sm font-bold ${isLive ? "text-red-400" : "text-zinc-500"}`}>{headerStatus}</span>
             </div>
             <span className="text-sm text-zinc-500">|</span>
-            <span className="text-sm text-zinc-400">
-              Territory Wars - Bot Arena
-            </span>
+            <span className="text-sm text-zinc-400">Territory Wars — Bot Arena</span>
+            <span className="text-xs text-zinc-600">· Slot {slotLabel}</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <span className="flex items-center gap-1.5 text-sm text-zinc-400">
               <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
               {viewerCount.toLocaleString()} watching
@@ -462,19 +472,21 @@ export default function ArenaGame() {
             <span className="text-sm text-zinc-500">
               Turn {gameState?.turn ?? 0}/{gameState?.maxTurns ?? 0}
             </span>
+            <span className="text-xs text-amber-500/90 tabular-nums">
+              Next arena: {formatCountdown(countdownMs)}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-4">
+        <p className="mb-3 text-center text-xs text-zinc-500">
+          Scheduled match every {MATCH_INTERVAL_MS / 60000} minutes (UTC). Opens mid-match? State fast-forwards to the same turn as everyone else, then plays in sync.
+        </p>
+
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
-          {/* Main Game Canvas */}
           <div className="space-y-3">
-            <div
-              ref={containerRef}
-              className="relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/30"
-            >
-              {/* Cinematic letterbox top */}
+            <div ref={containerRef} className="relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/30">
               <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b from-black/60 to-transparent" />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 bg-gradient-to-t from-black/60 to-transparent" />
 
@@ -486,84 +498,44 @@ export default function ArenaGame() {
                 className="block"
               />
 
-              {/* Winner overlay */}
               {gameState?.gameOver && gameState.winner && (
                 <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                  <div className="text-center">
+                  <div className="text-center px-4">
                     <div className="mb-2 text-5xl">{gameState.winner.emoji}</div>
-                    <div className="text-3xl font-black text-white">{gameState.winner.emoji} {gameState.winner.name}</div>
+                    <div className="text-3xl font-black text-white">
+                      {gameState.winner.emoji} {gameState.winner.name}
+                    </div>
                     <div className="mt-1 text-lg font-medium text-emerald-400">ARENA CHAMPION</div>
                     <div className="mt-1 text-sm text-zinc-400">
                       {gameState.winner.territory} territories | {gameState.winner.kills} eliminations
+                    </div>
+                    <div className="mt-4 text-sm text-amber-400">
+                      Next match starts in {formatCountdown(countdownMs)} · same time for all viewers
                     </div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Controls */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={toggleRunning}
-                className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500"
-              >
-                {gameState?.gameOver ? "New Game" : isRunning ? "Pause" : "Start"}
-              </button>
-              <button
-                onClick={initGame}
-                className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition hover:border-zinc-500 hover:text-white"
-              >
-                Reset
-              </button>
-
-              <div className="ml-auto flex items-center gap-2">
-                <span className="text-xs text-zinc-500">Speed:</span>
-                {[
-                  { label: "Slow", ms: 4000 },
-                  { label: "Normal", ms: 3000 },
-                  { label: "Fast", ms: 1500 },
-                  { label: "Turbo", ms: 600 },
-                ].map((s) => (
-                  <button
-                    key={s.label}
-                    onClick={() => setSpeed(s.ms)}
-                    className={`rounded px-2.5 py-1 text-xs font-medium transition ${
-                      speed === s.ms
-                        ? "bg-emerald-500/20 text-emerald-400"
-                        : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
+            <div className="rounded-lg border border-zinc-800/80 bg-zinc-900/40 px-3 py-2 text-xs text-zinc-400">
+              <span className="font-medium text-zinc-300">Broadcast pace:</span> one turn every {(REAL_MS_PER_TURN / 1000).toFixed(1)}s wall time (≈{SCHEDULED_MAX_TURNS} turns / {MATCH_INTERVAL_MS / 60000} min). No Start button — the arena is always on schedule.
             </div>
 
-            {/* Event Feed */}
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Live Commentary
-              </div>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">Live Commentary</div>
               <div className="max-h-48 space-y-1 overflow-y-auto">
                 {events.length === 0 && (
-                  <p className="text-sm text-zinc-600 italic">Press Start to begin the arena battle...</p>
+                  <p className="text-sm text-zinc-600 italic">Waiting for scheduled turns…</p>
                 )}
                 {events.map((evt, i) => (
                   <div
                     key={`${evt.turn}-${evt.type}-${evt.botId}-${i}`}
                     className={`flex items-start gap-2 rounded px-2 py-1 text-sm transition-colors ${
-                      evt.dramatic
-                        ? "bg-zinc-800/50 text-white"
-                        : "text-zinc-400"
+                      evt.dramatic ? "bg-zinc-800/50 text-white" : "text-zinc-400"
                     } ${i === 0 ? "arena-event-enter" : ""}`}
                   >
-                    <span className="shrink-0 text-xs text-zinc-600 tabular-nums">
-                      T{evt.turn}
-                    </span>
-                    <span
-                      className="shrink-0 h-2 w-2 mt-1.5 rounded-full"
-                      style={{ backgroundColor: evt.botColor }}
-                    />
+                    <span className="shrink-0 text-xs text-zinc-600 tabular-nums">T{evt.turn}</span>
+                    <span className="shrink-0 mt-1.5 h-2 w-2 rounded-full" style={{ backgroundColor: evt.botColor }} />
                     <span>{evt.message}</span>
                   </div>
                 ))}
@@ -571,41 +543,28 @@ export default function ArenaGame() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-4">
-            {/* Leaderboard */}
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                Leaderboard
-              </h3>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">Leaderboard</h3>
               <div className="space-y-1.5">
                 {aliveBots.map((bot, i) => (
                   <button
                     key={bot.id}
+                    type="button"
                     onClick={() => setSelectedBot(selectedBot?.id === bot.id ? null : bot)}
                     className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition ${
-                      selectedBot?.id === bot.id
-                        ? "bg-zinc-800 ring-1 ring-zinc-600"
-                        : "hover:bg-zinc-800/50"
+                      selectedBot?.id === bot.id ? "bg-zinc-800 ring-1 ring-zinc-600" : "hover:bg-zinc-800/50"
                     }`}
                   >
-                    <span className="w-5 text-center text-xs font-bold text-zinc-600">
-                      {i + 1}
-                    </span>
+                    <span className="w-5 text-center text-xs font-bold text-zinc-600">{i + 1}</span>
                     <span className="text-base">{bot.emoji}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between">
-                        <span
-                          className="truncate text-sm font-medium"
-                          style={{ color: bot.color }}
-                        >
+                        <span className="truncate text-sm font-medium" style={{ color: bot.color }}>
                           {bot.name}
                         </span>
-                        <span className="text-xs tabular-nums text-zinc-400">
-                          {bot.territory}
-                        </span>
+                        <span className="text-xs tabular-nums text-zinc-400">{bot.territory}</span>
                       </div>
-                      {/* HP + Energy bars */}
                       <div className="mt-1 flex gap-1">
                         <div className="h-1 flex-1 overflow-hidden rounded-full bg-zinc-800">
                           <div
@@ -626,7 +585,6 @@ export default function ArenaGame() {
               </div>
             </div>
 
-            {/* Selected Bot Detail */}
             {selectedBot && (
               <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
                 <div className="mb-3 flex items-center gap-2">
@@ -635,9 +593,7 @@ export default function ArenaGame() {
                     <div className="font-semibold" style={{ color: selectedBot.color }}>
                       {selectedBot.name}
                     </div>
-                    <div className="text-xs capitalize text-zinc-500">
-                      {selectedBot.strategy} strategy
-                    </div>
+                    <div className="text-xs capitalize text-zinc-500">{selectedBot.strategy} strategy</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
@@ -655,44 +611,30 @@ export default function ArenaGame() {
                   </div>
                   <div className="rounded-lg bg-zinc-800/50 p-2">
                     <div className="text-zinc-500">Territory</div>
-                    <div className="font-mono font-bold text-emerald-400">
-                      {selectedBot.territory}
-                    </div>
+                    <div className="font-mono font-bold text-emerald-400">{selectedBot.territory}</div>
                   </div>
                   <div className="rounded-lg bg-zinc-800/50 p-2">
                     <div className="text-zinc-500">Kills</div>
-                    <div className="font-mono font-bold text-amber-400">
-                      {selectedBot.kills}
-                    </div>
+                    <div className="font-mono font-bold text-amber-400">{selectedBot.kills}</div>
                   </div>
                   <div className="rounded-lg bg-zinc-800/50 p-2">
                     <div className="text-zinc-500">Attack</div>
-                    <div className="font-mono font-bold text-rose-400">
-                      {selectedBot.attackPower}
-                    </div>
+                    <div className="font-mono font-bold text-rose-400">{selectedBot.attackPower}</div>
                   </div>
                   <div className="rounded-lg bg-zinc-800/50 p-2">
                     <div className="text-zinc-500">Defense</div>
-                    <div className="font-mono font-bold text-cyan-400">
-                      {selectedBot.defensePower}
-                    </div>
+                    <div className="font-mono font-bold text-cyan-400">{selectedBot.defensePower}</div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Eliminated */}
             {eliminatedBots.length > 0 && (
               <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
-                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-500">
-                  Eliminated
-                </h3>
+                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-500">Eliminated</h3>
                 <div className="space-y-1">
                   {eliminatedBots.map((bot) => (
-                    <div
-                      key={bot.id}
-                      className="flex items-center gap-2 rounded px-2 py-1 text-sm text-zinc-600"
-                    >
+                    <div key={bot.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm text-zinc-600">
                       <span className="grayscale">{bot.emoji}</span>
                       <span className="line-through">{bot.name}</span>
                       <span className="ml-auto text-xs">T{bot.eliminatedTurn}</span>
@@ -702,11 +644,8 @@ export default function ArenaGame() {
               </div>
             )}
 
-            {/* Legend */}
             <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-500">
-                Map Legend
-              </h3>
+              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-500">Map Legend</h3>
               <div className="space-y-1.5 text-xs text-zinc-400">
                 <div className="flex items-center gap-2">
                   <span className="inline-block h-3 w-3 rounded-full bg-yellow-400/50" />
